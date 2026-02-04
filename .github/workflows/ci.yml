@@ -49,7 +49,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev
 
       - name: Download dependencies
-        shell: bash
+        shell: pwsh
         run: |
           mkdir -p deps
           
@@ -78,19 +78,17 @@ jobs:
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
-        shell: bash
+        shell: pwsh
         run: |
-          cmake -B build -G "MinGW Makefiles" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="$PWD/install" \
-            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk;$PWD/deps/mpf-ui-components"
+          cmake -B build -G "MinGW Makefiles" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps/mpf-sdk;${{ github.workspace }}/deps/mpf-ui-components"
 
       - name: Build
-        shell: bash
         run: cmake --build build
 
       - name: Install
-        shell: bash
         run: cmake --install build
 
       - name: Package (Linux)
@@ -131,8 +129,8 @@ jobs:
       - name: Trigger release build
         if: success()
         run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.DISPATCH_TOKEN }}" \
-            https://api.github.com/repos/dyzdyz010/mpf-release/dispatches \
+          curl -X POST `
+            -H "Accept: application/vnd.github+json" `
+            -H "Authorization: Bearer ${{ secrets.DISPATCH_TOKEN }}" `
+            https://api.github.com/repos/dyzdyz010/mpf-release/dispatches `
             -d '{"event_type":"plugin-released","client_payload":{"plugin":"${{ env.PLUGIN_NAME }}","version":"${{ github.ref_name }}"}}'
