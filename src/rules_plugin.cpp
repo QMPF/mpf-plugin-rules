@@ -26,7 +26,7 @@ bool RulesPlugin::initialize(mpf::ServiceRegistry* registry)
     MPF_LOG_INFO("OrdersPlugin", "Initializing...");
     
     // Create and register our service
-    m_ordersService = std::make_unique<OrdersService>(this);
+    m_ordersService = std::make_unique<orders::OrdersService>(this);
     
     // Register QML types
     registerQmlTypes();
@@ -125,7 +125,7 @@ void RulesPlugin::registerRoutes()
         menu->setBadge("orders", QString::number(m_ordersService->getOrderCount()));
         
         // Connect to update badge when orders change
-        connect(m_ordersService.get(), &OrdersService::ordersChanged, this, [this, menu]() {
+        connect(m_ordersService.get(), &orders::OrdersService::ordersChanged, this, [this, menu]() {
             menu->setBadge("orders", QString::number(m_ordersService->getOrderCount()));
         });
         
