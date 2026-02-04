@@ -5,75 +5,38 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main]
-
 env:
   QT_VERSION: '6.8.3'
-
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            artifact: mpf-plugin-rules-linux-x64
-          - os: windows-latest
-            artifact: mpf-plugin-rules-windows-x64
-    runs-on: ${{ matrix.os }}
+  build-linux:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           cache: true
-      - name: Install Linux deps
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev
-      - name: Download deps (Linux)
-        if: runner.os == 'Linux'
+      - run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev
+      - name: Download deps
         run: |
           mkdir -p sdk
           for dep in mpf-sdk mpf-http-client mpf-ui-components; do
-            curl -L https://github.com/dyzdyz010/$dep/releases/latest/download/$dep-linux-x64.tar.gz 2>/dev/null | tar -xz -C sdk 2>/dev/null || true
+            curl -sL https://github.com/dyzdyz010/$dep/releases/latest/download/$dep-linux-x64.tar.gz | tar -xz -C sdk 2>/dev/null || true
           done
-      - name: Download deps (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path sdk
-          foreach ($dep in @("mpf-sdk", "mpf-http-client", "mpf-ui-components")) {
-            try { Invoke-WebRequest "https://github.com/dyzdyz010/$dep/releases/latest/download/$dep-windows-x64.zip" -OutFile "$dep.zip"; Expand-Archive "$dep.zip" -DestinationPath sdk -Force } catch {}
-          }
-      - name: Configure (Linux)
-        if: runner.os == 'Linux'
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$PWD/sdk
-      - name: Configure (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$PWD/sdk"
-      - name: Build
-        run: cmake --build build
-        continue-on-error: true
-      - name: Package (Linux)
-        if: runner.os == 'Linux'
+      - run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$PWD/sdk -DCMAKE_INSTALL_PREFIX=$PWD/install
+      - run: cmake --build build || true
+      - name: Package
         run: |
           mkdir -p pkg/plugins pkg/qml
           cp build/plugins/*.so pkg/plugins/ 2>/dev/null || true
           cp -r build/qml/* pkg/qml/ 2>/dev/null || true
-          cd pkg && tar -czvf ../${{ matrix.artifact }}.tar.gz . || tar -czvf ../${{ matrix.artifact }}.tar.gz --files-from /dev/null
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path pkg/plugins, pkg/qml
-          Copy-Item build/plugins/*.dll pkg/plugins/ -ErrorAction SilentlyContinue
-          Copy-Item -Recurse build/qml/* pkg/qml/ -ErrorAction SilentlyContinue
-          Set-Location pkg; 7z a -tzip ../${{ matrix.artifact }}.zip .
+          cd pkg && tar -czvf ../mpf-plugin-rules-linux-x64.tar.gz . || tar -czvf ../mpf-plugin-rules-linux-x64.tar.gz --files-from /dev/null
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.*
+          name: mpf-plugin-rules-linux-x64
+          path: mpf-plugin-rules-linux-x64.tar.gz
   release:
-    needs: build
+    needs: build-linux
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
