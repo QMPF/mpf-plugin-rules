@@ -1,0 +1,5 @@
+<RCC>
+    <qresource lang="qml" prefix="/qml">
+        <file>qml/TestCard.qml</file>
+    </qresource>
+</RCC>

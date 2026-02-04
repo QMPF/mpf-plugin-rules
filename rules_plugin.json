@@ -1,0 +1,12 @@
+{
+    "id": "com.biiz.rules",
+    "name": "Rules Plugin",
+    "version": "1.0.0",
+    "description": "Rules management functionality",
+    "vendor": "Biiz",
+    "requires": [],
+    "provides": ["IRulesService"],
+    "qmlModules": ["Biiz.Rules"],
+    "priority": 10,
+    "loadOnStartup": true
+}
