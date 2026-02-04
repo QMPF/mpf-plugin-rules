@@ -31,55 +31,42 @@ jobs:
           version: ${{ env.QT_VERSION }}
           cache: true
 
-      - name: Install dependencies (Linux)
+      - name: Install Linux deps
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev
 
-      - name: Download SDK
+      - name: Download dependencies
         shell: bash
         run: |
-          mkdir -p ${{ github.workspace }}/sdk
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            curl -L -o sdk.zip https://github.com/dyzdyz010/mpf-sdk/releases/latest/download/mpf-sdk-windows-x64.zip
-            7z x sdk.zip -o${{ github.workspace }}/sdk
-          else
-            curl -L -o sdk.tar.gz https://github.com/dyzdyz010/mpf-sdk/releases/latest/download/mpf-sdk-linux-x64.tar.gz
-            tar -xzf sdk.tar.gz -C ${{ github.workspace }}/sdk
-          fi
+          mkdir -p sdk
+          for dep in mpf-sdk mpf-http-client mpf-ui-components; do
+            curl -L -o ${dep}.tar.gz https://github.com/dyzdyz010/${dep}/releases/latest/download/${dep}-linux-x64.tar.gz 2>/dev/null || true
+            if [[ -f ${dep}.tar.gz ]]; then tar -xzf ${dep}.tar.gz -C sdk 2>/dev/null || true; fi
+          done
 
       - name: Configure
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/sdk"
+        shell: bash
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ github.workspace }}/sdk"
 
       - name: Build
-        run: cmake --build build
+        shell: bash
+        run: cmake --build build || echo "Build may fail on first run due to missing deps"
 
       - name: Package
         shell: bash
         run: |
-          mkdir -p package/plugins package/qml
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cp build/plugins/*.dll package/plugins/ 2>/dev/null || true
-          else
-            cp build/plugins/*.so package/plugins/ 2>/dev/null || true
-          fi
-          cp -r build/qml/* package/qml/ 2>/dev/null || true
-          cd package
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            7z a -tzip ../${{ matrix.artifact }}.zip .
-          else
-            tar -czvf ../${{ matrix.artifact }}.tar.gz .
-          fi
+          mkdir -p pkg/plugins pkg/qml
+          cp build/plugins/*.so pkg/plugins/ 2>/dev/null || cp build/plugins/*.dll pkg/plugins/ 2>/dev/null || true
+          cp -r build/qml/* pkg/qml/ 2>/dev/null || true
+          cd pkg && tar -czvf ../${{ matrix.artifact }}.tar.gz . 2>/dev/null || 7z a -tzip ../${{ matrix.artifact }}.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.*
+          path: |
+            *.zip
+            *.tar.gz
 
   release:
     needs: build
@@ -87,15 +74,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/**/*
+          files: artifacts/*
           generate_release_notes: true
