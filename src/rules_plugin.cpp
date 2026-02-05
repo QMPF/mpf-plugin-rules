@@ -9,6 +9,7 @@
 
 #include <QJsonDocument>
 #include <QQmlEngine>
+#include <QFile>
 
 namespace rules {
 
@@ -24,6 +25,17 @@ bool RulesPlugin::initialize(mpf::ServiceRegistry* registry)
     m_registry = registry;
     
     MPF_LOG_INFO("RulesPlugin", "Initializing...");
+    
+    // 调试：检查 qrc 资源是否可访问
+    QStringList resourcesToCheck = {
+        ":/Biiz/Rules/qml/OrdersPage.qml",
+        "qrc:/Biiz/Rules/qml/OrdersPage.qml"
+    };
+    for (const QString& res : resourcesToCheck) {
+        QFile f(res);
+        MPF_LOG_DEBUG("RulesPlugin", 
+            QString("Resource check: %1 exists=%2").arg(res).arg(f.exists() ? "YES" : "NO").toStdString().c_str());
+    }
     
     // Create and register our service
     m_ordersService = std::make_unique<orders::OrdersService>(this);
