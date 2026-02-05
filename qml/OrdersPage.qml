@@ -1,21 +1,20 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import YourCo.Orders 1.0
 
 Page {
     id: root
     
-    title: qsTr("Orders")
+    title: qsTr("Rules")
     
     background: Rectangle {
         color: Theme ? Theme.backgroundColor : "#FFFFFF"
     }
     
-    // Orders model
+    // Rules model
     OrderModel {
-        id: orderModel
-    service: OrdersService
+        id: rulesModel
+        service: OrdersService
     }
     
     header: ToolBar {
@@ -29,7 +28,7 @@ Page {
             spacing: Theme ? Theme.spacingSmall : 8
             
             Label {
-                text: qsTr("Orders (%1)").arg(orderModel.count)
+                text: qsTr("Rules (%1)").arg(rulesModel.count)
                 font.pixelSize: 18
                 font.bold: true
                 color: Theme ? Theme.textColor : "#212121"
@@ -41,7 +40,7 @@ Page {
                 id: statusFilter
                 model: ["All", "pending", "processing", "shipped", "delivered", "cancelled"]
                 onCurrentTextChanged: {
-                    orderModel.filterStatus = currentText === "All" ? "" : currentText
+                    rulesModel.filterStatus = currentText === "All" ? "" : currentText
                 }
             }
             
@@ -62,21 +61,21 @@ Page {
         spacing: Theme ? Theme.spacingMedium : 16
         
         StatCard {
-            label: qsTr("Total Orders")
+            label: qsTr("Total Rules")
             value: OrdersService.getOrderCount()
             Layout.fillWidth: true
         }
         
         StatCard {
-            label: qsTr("Revenue")
+            label: qsTr("Active")
             value: "$" + OrdersService.getTotalRevenue().toFixed(2)
             Layout.fillWidth: true
         }
     }
     
-    // Orders list
+    // Rules list
     ListView {
-        id: ordersList
+        id: rulesList
         anchors.top: statsRow.bottom
         anchors.left: parent.left
         anchors.right: parent.right
@@ -87,10 +86,10 @@ Page {
         spacing: Theme ? Theme.spacingSmall : 8
         clip: true
         
-        model: orderModel
+        model: rulesModel
         
         delegate: OrderCard {
-            width: ordersList.width
+            width: rulesList.width
             
             orderId: model.id
             customerName: model.customerName
@@ -102,7 +101,8 @@ Page {
             createdAt: model.createdAt
             
             onClicked: {
-                Navigation.push("orders/detail", {orderId: model.id})
+                detailPopup.ruleId = model.id
+                detailPopup.open()
             }
             
             onStatusChangeRequested: function(newStatus) {
@@ -110,7 +110,7 @@ Page {
             }
             
             onDeleteRequested: {
-                deleteDialog.orderId = model.id
+                deleteDialog.ruleId = model.id
                 deleteDialog.open()
             }
         }
@@ -118,14 +118,114 @@ Page {
         // Empty state
         Label {
             anchors.centerIn: parent
-            visible: orderModel.count === 0
-            text: qsTr("No orders found")
+            visible: rulesModel.count === 0
+            text: qsTr("No rules found")
             color: Theme ? Theme.textSecondaryColor : "#757575"
             font.pixelSize: 16
         }
     }
     
-    // Create order dialog
+    // Detail popup
+    Popup {
+        id: detailPopup
+        
+        property string ruleId: ""
+        property var ruleData: ({})
+        
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(500, root.width - 48)
+        height: Math.min(500, root.height - 48)
+        padding: 24
+        
+        background: Rectangle {
+            color: Theme ? Theme.surfaceColor : "#FFFFFF"
+            radius: Theme ? Theme.radiusMedium : 12
+        }
+        
+        onOpened: {
+            ruleData = OrdersService.getOrder(ruleId)
+        }
+        
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 16
+            
+            RowLayout {
+                Layout.fillWidth: true
+                
+                Label {
+                    text: qsTr("Rule #%1").arg(detailPopup.ruleId)
+                    font.pixelSize: 20
+                    font.bold: true
+                    color: Theme ? Theme.textColor : "#212121"
+                    Layout.fillWidth: true
+                }
+                
+                Button {
+                    text: "✕"
+                    flat: true
+                    onClicked: detailPopup.close()
+                }
+            }
+            
+            RowLayout {
+                Label { text: qsTr("Status:"); color: Theme ? Theme.textSecondaryColor : "#757575" }
+                Label { 
+                    text: detailPopup.ruleData.status || ""
+                    font.bold: true
+                    color: Theme ? Theme.primaryColor : "#2196F3"
+                }
+            }
+            
+            RowLayout {
+                Label { text: qsTr("Name:"); color: Theme ? Theme.textSecondaryColor : "#757575" }
+                Label { text: detailPopup.ruleData.customerName || ""; color: Theme ? Theme.textColor : "#212121" }
+            }
+            
+            RowLayout {
+                Label { text: qsTr("Description:"); color: Theme ? Theme.textSecondaryColor : "#757575" }
+                Label { text: detailPopup.ruleData.productName || ""; color: Theme ? Theme.textColor : "#212121" }
+            }
+            
+            Item { Layout.fillHeight: true }
+            
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                
+                ComboBox {
+                    model: ["pending", "processing", "shipped", "delivered", "cancelled"]
+                    currentIndex: model.indexOf(detailPopup.ruleData.status)
+                    
+                    onActivated: function(index) {
+                        if (model[index] !== detailPopup.ruleData.status) {
+                            OrdersService.updateStatus(detailPopup.ruleId, model[index])
+                            detailPopup.ruleData = OrdersService.getOrder(detailPopup.ruleId)
+                        }
+                    }
+                }
+                
+                Item { Layout.fillWidth: true }
+                
+                Button {
+                    text: qsTr("Delete")
+                    onClicked: {
+                        deleteDialog.ruleId = detailPopup.ruleId
+                        deleteDialog.open()
+                        detailPopup.close()
+                    }
+                }
+                
+                Button {
+                    text: qsTr("Close")
+                    onClicked: detailPopup.close()
+                }
+            }
+        }
+    }
+    
+    // Create dialog
     CreateOrderDialog {
         id: createDialog
         onAccepted: {
@@ -137,20 +237,20 @@ Page {
     Dialog {
         id: deleteDialog
         
-        property string orderId: ""
+        property string ruleId: ""
         
-        title: qsTr("Delete Order")
+        title: qsTr("Delete Rule")
         modal: true
         standardButtons: Dialog.Yes | Dialog.No
         
         anchors.centerIn: parent
         
         Label {
-            text: qsTr("Are you sure you want to delete this order?")
+            text: qsTr("Are you sure you want to delete this rule?")
         }
         
         onAccepted: {
-            OrdersService.deleteOrder(orderId)
+            OrdersService.deleteOrder(ruleId)
         }
     }
     

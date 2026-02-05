@@ -10,6 +10,9 @@
 #include <QJsonDocument>
 #include <QQmlEngine>
 #include <QFile>
+#include <QDir>
+#include <QUrl>
+#include <QCoreApplication>
 
 namespace rules {
 
@@ -101,11 +104,36 @@ void RulesPlugin::registerRoutes()
 {
     auto* nav = m_registry->get<mpf::INavigation>();
     if (nav) {
-        // 使用 qrc:// 路径 - QML 资源已通过 qt_add_qml_module 编译到插件中
-        // CMakeLists.txt 设置了 RESOURCE_PREFIX /，所以路径是 :/URI/QML_FILES路径
-        nav->registerRoute("rules", "qrc:/Biiz/Rules/qml/OrdersPage.qml");
-        nav->registerRoute("rules/detail", "qrc:/Biiz/Rules/qml/OrderDetailPage.qml");
-        MPF_LOG_DEBUG("RulesPlugin", "Registered navigation routes (qrc:/Biiz/Rules/qml/)");
+        // 在 QML 导入路径中查找 Biiz/Rules 目录
+        QString qmlBase;
+        
+        QString qmlImportPaths = qEnvironmentVariable("QML_IMPORT_PATH");
+        QStringList importPaths = qmlImportPaths.split(QDir::listSeparator(), Qt::SkipEmptyParts);
+        
+        QString appDir = QCoreApplication::applicationDirPath();
+        importPaths.prepend(QDir::cleanPath(appDir + "/../qml"));
+        
+        for (const QString& importPath : importPaths) {
+            QString candidate = QDir::cleanPath(importPath + "/Biiz/Rules");
+            if (QDir(candidate).exists()) {
+                qmlBase = candidate;
+                break;
+            }
+        }
+        
+        if (qmlBase.isEmpty()) {
+            MPF_LOG_WARNING("RulesPlugin", "Could not find Biiz/Rules in any import path!");
+            qmlBase = QDir::cleanPath(appDir + "/../qml/Biiz/Rules");
+        }
+        
+        QString rulesPage = QUrl::fromLocalFile(qmlBase + "/RulesPage.qml").toString();
+        
+        MPF_LOG_DEBUG("RulesPlugin", QString("QML base path: %1").arg(qmlBase).toStdString().c_str());
+        
+        // 注册主页面（内部导航使用 Popup）
+        nav->registerRoute("rules", rulesPage);
+        
+        MPF_LOG_DEBUG("RulesPlugin", "Registered main page route");
     }
     
     // Register menu item

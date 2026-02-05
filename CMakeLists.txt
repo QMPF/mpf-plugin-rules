@@ -33,16 +33,20 @@ target_link_libraries(rules-plugin PRIVATE
     MPF::foundation-sdk
 )
 
+# Set resource aliases to flatten directory structure
+set_source_files_properties(qml/OrdersPage.qml PROPERTIES QT_RESOURCE_ALIAS RulesPage.qml)
+set_source_files_properties(qml/OrderCard.qml PROPERTIES QT_RESOURCE_ALIAS RuleCard.qml)
+set_source_files_properties(qml/CreateOrderDialog.qml PROPERTIES QT_RESOURCE_ALIAS CreateRuleDialog.qml)
+
 # QML module embedded in plugin
 qt_add_qml_module(rules-plugin
     URI Biiz.Rules
     VERSION 1.0
-    RESOURCE_PREFIX /         # 使资源路径为 :/Biiz/Rules/ 而非 :/qt/qml/Biiz/Rules/
+    RESOURCE_PREFIX /
     QML_FILES
-        qml/OrdersPage.qml
-        qml/OrderDetailPage.qml
-        qml/OrderCard.qml
-        qml/CreateOrderDialog.qml
+        qml/OrdersPage.qml        # 主页面（详情用 Popup 显示）
+        qml/OrderCard.qml         # 列表项卡片
+        qml/CreateOrderDialog.qml # 创建对话框
     OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/Biiz/Rules
     NO_PLUGIN
     RESOURCES ui.qrc
