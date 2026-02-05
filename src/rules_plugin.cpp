@@ -104,36 +104,50 @@ void RulesPlugin::registerRoutes()
 {
     auto* nav = m_registry->get<mpf::INavigation>();
     if (nav) {
-        // 在 QML 导入路径中查找 Biiz/Rules 目录
-        QString qmlBase;
-        
-        QString qmlImportPaths = qEnvironmentVariable("QML_IMPORT_PATH");
-        QStringList importPaths = qmlImportPaths.split(QDir::listSeparator(), Qt::SkipEmptyParts);
-        
+        // 构建 QML 搜索路径列表（优先级从高到低）
+        QStringList searchPaths;
         QString appDir = QCoreApplication::applicationDirPath();
-        importPaths.prepend(QDir::cleanPath(appDir + "/../qml"));
         
-        for (const QString& importPath : importPaths) {
-            QString candidate = QDir::cleanPath(importPath + "/Biiz/Rules");
-            if (QDir(candidate).exists()) {
-                qmlBase = candidate;
+        // 1. MPF_SDK_ROOT 环境变量（mpf-dev 设置）
+        QString sdkRoot = qEnvironmentVariable("MPF_SDK_ROOT");
+        if (!sdkRoot.isEmpty()) {
+            searchPaths << QDir::cleanPath(sdkRoot + "/qml");
+        }
+        
+        // 2. QML_IMPORT_PATH 环境变量
+        QString qmlImportPaths = qEnvironmentVariable("QML_IMPORT_PATH");
+        searchPaths << qmlImportPaths.split(QDir::listSeparator(), Qt::SkipEmptyParts);
+        
+        // 3. 应用程序相对路径（标准 SDK 安装布局）
+        searchPaths << QDir::cleanPath(appDir + "/../qml");
+        
+        // 4. 应用程序同级 qml 目录（开发模式）
+        searchPaths << QDir::cleanPath(appDir + "/qml");
+        
+        // 查找 QML 模块目录
+        QString qmlFile;
+        for (const QString& basePath : searchPaths) {
+            QString candidate = QDir::cleanPath(basePath + "/Biiz/Rules/RulesPage.qml");
+            if (QFile::exists(candidate)) {
+                qmlFile = candidate;
                 break;
             }
         }
         
-        if (qmlBase.isEmpty()) {
-            MPF_LOG_WARNING("RulesPlugin", "Could not find Biiz/Rules in any import path!");
-            qmlBase = QDir::cleanPath(appDir + "/../qml/Biiz/Rules");
+        if (qmlFile.isEmpty()) {
+            MPF_LOG_ERROR("RulesPlugin", "Could not find Biiz/Rules/RulesPage.qml!");
+            MPF_LOG_ERROR("RulesPlugin", QString("Searched paths: %1").arg(searchPaths.join("; ")).toStdString().c_str());
+            return;
         }
         
-        QString rulesPage = QUrl::fromLocalFile(qmlBase + "/RulesPage.qml").toString();
+        QString rulesPage = QUrl::fromLocalFile(qmlFile).toString();
         
-        MPF_LOG_DEBUG("RulesPlugin", QString("QML base path: %1").arg(qmlBase).toStdString().c_str());
+        MPF_LOG_INFO("RulesPlugin", QString("Rules page URL: %1").arg(rulesPage).toStdString().c_str());
         
         // 注册主页面（内部导航使用 Popup）
         nav->registerRoute("rules", rulesPage);
         
-        MPF_LOG_DEBUG("RulesPlugin", "Registered main page route");
+        MPF_LOG_INFO("RulesPlugin", "Registered route: rules");
     }
     
     // Register menu item
