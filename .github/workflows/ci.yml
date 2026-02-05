@@ -13,7 +13,7 @@ on:
 env:
   QT_VERSION: '6.8.3'
   SDK_VERSION: 'v1.0.2'
-  UI_COMPONENTS_VERSION: 'v1.0.2'
+  UI_COMPONENTS_VERSION: 'v1.0.3'
   PLUGIN_NAME: 'rules'  # orders or rules
 
 jobs:
@@ -91,7 +91,8 @@ jobs:
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/deps/mpf-sdk;$GITHUB_WORKSPACE/deps/mpf-ui-components"
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps/mpf-sdk;$GITHUB_WORKSPACE/deps/mpf-ui-components"
 
       - name: Build
         run: cmake --build build
