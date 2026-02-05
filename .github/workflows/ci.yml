@@ -136,10 +136,10 @@ jobs:
           generate_release_notes: true
 
       - name: Trigger release build
-        if: success()
+        if: success() && secrets.DISPATCH_TOKEN != ''
         run: |
-          curl -X POST `
-            -H "Accept: application/vnd.github+json" `
-            -H "Authorization: Bearer ${{ secrets.DISPATCH_TOKEN }}" `
-            https://api.github.com/repos/dyzdyz010/mpf-release/dispatches `
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/dyzdyz010/mpf-release/dispatches \
             -d '{"event_type":"plugin-released","client_payload":{"plugin":"${{ env.PLUGIN_NAME }}","version":"${{ github.ref_name }}"}}'
