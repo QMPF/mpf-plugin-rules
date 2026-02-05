@@ -37,6 +37,7 @@ target_link_libraries(rules-plugin PRIVATE
 qt_add_qml_module(rules-plugin
     URI Biiz.Rules
     VERSION 1.0
+    RESOURCE_PREFIX /         # 使资源路径为 :/Biiz/Rules/ 而非 :/qt/qml/Biiz/Rules/
     QML_FILES
         qml/OrdersPage.qml
         qml/OrderDetailPage.qml

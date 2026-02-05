@@ -98,11 +98,11 @@ void RulesPlugin::registerRoutes()
 {
     auto* nav = m_registry->get<mpf::INavigation>();
     if (nav) {
-        // Qt 6 路径: qrc:/qt/qml/{URI}/{QML_FILES路径}
-        // QML_FILES 定义为 qml/*.qml，所以完整路径包含 qml/ 子目录
-        nav->registerRoute("rules", "qrc:/qt/qml/Biiz/Rules/qml/OrdersPage.qml");
-        nav->registerRoute("rules/detail", "qrc:/qt/qml/Biiz/Rules/qml/OrderDetailPage.qml");
-        MPF_LOG_DEBUG("OrdersPlugin", "Registered navigation routes");
+        // 使用 qrc:// 路径 - QML 资源已通过 qt_add_qml_module 编译到插件中
+        // CMakeLists.txt 设置了 RESOURCE_PREFIX /，所以路径是 :/URI/QML_FILES路径
+        nav->registerRoute("rules", "qrc:/Biiz/Rules/qml/OrdersPage.qml");
+        nav->registerRoute("rules/detail", "qrc:/Biiz/Rules/qml/OrderDetailPage.qml");
+        MPF_LOG_DEBUG("RulesPlugin", "Registered navigation routes (qrc:/Biiz/Rules/qml/)");
     }
     
     // Register menu item
