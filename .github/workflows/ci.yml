@@ -12,21 +12,32 @@ on:
         description: 'SDK version (empty=latest)'
         required: false
         default: ''
-      force_latest:
-        description: 'Force use latest dependencies'
-        type: boolean
-        default: false
-  repository_dispatch:
-    types: [host-released]
 
 env:
   QT_VERSION: '6.8.3'
-  SDK_VERSION: ${{ github.event.inputs.sdk_version || github.event.client_payload.sdk_version || 'v1.0.2' }}
-  UI_COMPONENTS_VERSION: 'v1.0.4'
-  PLUGIN_NAME: 'rules'  # orders or rules
+  PLUGIN_NAME: 'rules'
 
 jobs:
+  resolve-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      sdk_version: ${{ steps.resolve.outputs.sdk_version }}
+    steps:
+      - name: Resolve dependency versions
+        id: resolve
+        run: |
+          if [[ -n "${{ github.event.inputs.sdk_version }}" ]]; then
+            SDK_VERSION="${{ github.event.inputs.sdk_version }}"
+          else
+            SDK_VERSION=$(gh release view -R dyzdyz010/mpf-sdk --json tagName -q '.tagName')
+          fi
+          echo "sdk_version=$SDK_VERSION" >> $GITHUB_OUTPUT
+          echo "Using SDK: $SDK_VERSION"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   build:
+    needs: resolve-versions
     strategy:
       fail-fast: false
       matrix:
@@ -64,25 +75,13 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev
 
-      - name: Install deps (Windows)
-        if: runner.os == 'Windows'
-        run: choco install ninja -y
-
-      - name: Download dependencies
+      - name: Download SDK
         shell: bash
         run: |
-          mkdir -p deps
-          
-          # Download SDK
           mkdir -p deps/mpf-sdk && cd deps/mpf-sdk
-          gh release download ${{ env.SDK_VERSION }} -R dyzdyz010/mpf-sdk -p "mpf-sdk-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
-          [[ "${{ matrix.ext }}" == "tar.gz" ]] && tar -xzf *.tar.gz || 7z x *.zip
-          rm -f *.${{ matrix.ext }}
-          cd ../..
-          
-          # Download ui-components
-          mkdir -p deps/mpf-ui-components && cd deps/mpf-ui-components
-          gh release download ${{ env.UI_COMPONENTS_VERSION }} -R dyzdyz010/mpf-ui-components -p "mpf-ui-components-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
+          gh release download ${{ needs.resolve-versions.outputs.sdk_version }} \
+            -R dyzdyz010/mpf-sdk \
+            -p "mpf-sdk-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
           [[ "${{ matrix.ext }}" == "tar.gz" ]] && tar -xzf *.tar.gz || 7z x *.zip
           rm -f *.${{ matrix.ext }}
         env:
@@ -94,21 +93,23 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_INSTALL_PREFIX=$PWD/install \
-            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk;$PWD/deps/mpf-ui-components"
+            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk"
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          cmake -B build -G Ninja \
+          cmake -B build -G "MinGW Makefiles" \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
-            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps/mpf-sdk;$GITHUB_WORKSPACE/deps/mpf-ui-components"
+            -DCMAKE_INSTALL_PREFIX="$PWD/install" \
+            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk"
 
       - name: Build
+        shell: bash
         run: cmake --build build
 
       - name: Install
+        shell: bash
         run: cmake --install build
 
       - name: Package (Linux)
@@ -146,14 +147,16 @@ jobs:
           files: artifacts/*
           generate_release_notes: true
 
-      - name: Trigger release build
-        if: success()
-        continue-on-error: true
+  # Cascade: plugin-rules -> release (leaf node)
+  trigger-release:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger mpf-release
         run: |
-          if [ -n "${{ secrets.DISPATCH_TOKEN }}" ]; then
-            curl -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.DISPATCH_TOKEN }}" \
-              https://api.github.com/repos/dyzdyz010/mpf-release/dispatches \
-              -d '{"event_type":"plugin-released","client_payload":{"plugin":"${{ env.PLUGIN_NAME }}","version":"${{ github.ref_name }}"}}'
-          fi
+          VERSION="${GITHUB_REF_NAME}"
+          echo "Triggering mpf-release (plugin-rules $VERSION completed)"
+          gh workflow run release.yml -R dyzdyz010/mpf-release
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
