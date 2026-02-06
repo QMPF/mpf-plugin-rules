@@ -8,3 +8,6 @@ CMakeFiles/
 cmake_install.cmake
 compile_commands.json
 .cache/
+
+# User-specific CMake presets
+CMakeUserPresets.json
