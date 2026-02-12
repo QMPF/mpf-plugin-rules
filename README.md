@@ -8,7 +8,7 @@ Qt Modular Plugin Framework - Rules Plugin (Example)
 
 ## 依赖
 
-- Qt 6.5+ (Core, Gui, Qml, Quick)
+- Qt 6.8+ (Core, Gui, Qml, Quick)
 - mpf-sdk
 
 ## 构建
