@@ -12,6 +12,10 @@ on:
         description: 'SDK version (empty=latest)'
         required: false
         default: ''
+      http_client_version:
+        description: 'HTTP Client version (empty=latest)'
+        required: false
+        default: ''
       auto_release:
         description: 'Auto bump version and release'
         type: boolean
@@ -26,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sdk_version: ${{ steps.resolve.outputs.sdk_version }}
+      http_client_version: ${{ steps.resolve.outputs.http_client_version }}
     steps:
       - name: Resolve dependency versions
         id: resolve
@@ -36,7 +41,15 @@ jobs:
             SDK_VERSION=$(gh release view -R QMPF/mpf-sdk --json tagName -q '.tagName')
           fi
           echo "sdk_version=$SDK_VERSION" >> $GITHUB_OUTPUT
-          echo "Using SDK: $SDK_VERSION"
+
+          if [[ -n "${{ github.event.inputs.http_client_version }}" ]]; then
+            HTTP_VERSION="${{ github.event.inputs.http_client_version }}"
+          else
+            HTTP_VERSION=$(gh release view -R QMPF/mpf-http-client --json tagName -q '.tagName')
+          fi
+          echo "http_client_version=$HTTP_VERSION" >> $GITHUB_OUTPUT
+
+          echo "Using SDK: $SDK_VERSION, HTTP Client: $HTTP_VERSION"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -79,15 +92,26 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev
 
-      - name: Download SDK
+      - name: Download dependencies
         shell: bash
         run: |
+          mkdir -p deps
+
           mkdir -p deps/mpf-sdk && cd deps/mpf-sdk
           gh release download ${{ needs.resolve-versions.outputs.sdk_version }} \
             -R QMPF/mpf-sdk \
             -p "mpf-sdk-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
           [[ "${{ matrix.ext }}" == "tar.gz" ]] && tar -xzf *.tar.gz || 7z x *.zip
           rm -f *.${{ matrix.ext }}
+          cd ../..
+
+          mkdir -p deps/mpf-http-client && cd deps/mpf-http-client
+          gh release download ${{ needs.resolve-versions.outputs.http_client_version }} \
+            -R QMPF/mpf-http-client \
+            -p "mpf-http-client-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
+          [[ "${{ matrix.ext }}" == "tar.gz" ]] && tar -xzf *.tar.gz || 7z x *.zip
+          rm -f *.${{ matrix.ext }}
+          cd ../..
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -97,7 +121,7 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_INSTALL_PREFIX=$PWD/install \
-            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk"
+            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk;$PWD/deps/mpf-http-client"
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
@@ -105,8 +129,8 @@ jobs:
         run: |
           cmake -B build -G "MinGW Makefiles" \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_INSTALL_PREFIX="$PWD/install" \
-            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk"
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps/mpf-sdk;$GITHUB_WORKSPACE/deps/mpf-http-client"
 
       - name: Build
         shell: bash
