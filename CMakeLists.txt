@@ -48,6 +48,12 @@ endif()
 # QML 文件
 set(PLUGIN_QML_FILES qml/RulesPage.qml qml/RuleCard.qml qml/CreateRuleDialog.qml)
 
+# Auto-flatten paths: qml/Foo.qml -> Foo.qml
+foreach(file ${PLUGIN_QML_FILES})
+    string(REGEX REPLACE "^qml/" "" alias "${file}")
+    set_source_files_properties(${file} PROPERTIES QT_RESOURCE_ALIAS ${alias})
+endforeach()
+
 # QML module embedded in plugin
 qt_add_qml_module(rules-plugin
     URI Biiz.Rules

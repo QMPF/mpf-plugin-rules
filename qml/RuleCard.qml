@@ -21,6 +21,8 @@ Rectangle {
     implicitHeight: 120
     radius: Theme ? Theme.radiusMedium : 8
     color: Theme ? Theme.surfaceColor : "#F5F5F5"
+    border.width: 1
+    border.color: Theme ? Qt.alpha(Theme.textSecondaryColor, 0.3) : "#E0E0E0"
     
     // Hover effect
     Rectangle {
@@ -138,7 +140,7 @@ Rectangle {
                     model: ["pending", "processing", "shipped", "delivered", "cancelled"]
                     currentIndex: model.indexOf(root.status)
                     
-                    implicitWidth: 100
+                    implicitWidth: 130
                     
                     onActivated: function(index) {
                         if (model[index] !== root.status) {

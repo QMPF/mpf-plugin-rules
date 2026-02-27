@@ -19,22 +19,23 @@ Page {
     
     header: ToolBar {
         background: Rectangle {
-            color: Theme ? Theme.surfaceColor : "#F5F5F5"
+            color: "transparent"
         }
-        
+
         RowLayout {
             anchors.fill: parent
             anchors.margins: Theme ? Theme.spacingSmall : 8
             spacing: Theme ? Theme.spacingSmall : 8
-            
+
+            // 计数标签（标题已在宿主 Header 显示，不再重复）
             Label {
-                text: qsTr("Rules (%1)").arg(rulesModel.count)
-                font.pixelSize: 18
-                font.bold: true
-                color: Theme ? Theme.textColor : "#212121"
-                Layout.fillWidth: true
+                text: qsTr("%1 rules").arg(rulesModel.count)
+                font.pixelSize: 13
+                color: Theme ? Theme.textSecondaryColor : "#757575"
             }
-            
+
+            Item { Layout.fillWidth: true }
+
             // Status filter
             ComboBox {
                 id: statusFilter
@@ -258,10 +259,12 @@ Page {
     component StatCard: Rectangle {
         property string label: ""
         property string value: ""
-        
+
         implicitHeight: 80
         radius: Theme ? Theme.radiusMedium : 8
         color: Theme ? Theme.surfaceColor : "#F5F5F5"
+        border.width: 1
+        border.color: Theme ? Qt.alpha(Theme.textSecondaryColor, 0.3) : "#E0E0E0"
         
         ColumnLayout {
             anchors.centerIn: parent
