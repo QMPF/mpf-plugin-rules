@@ -5,6 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
+# macOS RPATH settings for plugins (shared libraries)
+if(APPLE)
+    set(CMAKE_MACOSX_RPATH ON)
+    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib;@loader_path/../Frameworks")
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
+endif()
+
 # Find dependencies
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
 
