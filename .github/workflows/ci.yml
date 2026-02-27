@@ -8,12 +8,8 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      sdk_version:
-        description: 'SDK version (empty=latest)'
-        required: false
-        default: ''
-      http_client_version:
-        description: 'HTTP Client version (empty=latest)'
+      mpf_version:
+        description: 'MPF release version (empty=latest)'
         required: false
         default: ''
       auto_release:
@@ -29,27 +25,18 @@ jobs:
   resolve-versions:
     runs-on: ubuntu-latest
     outputs:
-      sdk_version: ${{ steps.resolve.outputs.sdk_version }}
-      http_client_version: ${{ steps.resolve.outputs.http_client_version }}
+      mpf_version: ${{ steps.resolve.outputs.mpf_version }}
     steps:
-      - name: Resolve dependency versions
+      - name: Resolve MPF version
         id: resolve
         run: |
-          if [[ -n "${{ github.event.inputs.sdk_version }}" ]]; then
-            SDK_VERSION="${{ github.event.inputs.sdk_version }}"
+          if [[ -n "${{ github.event.inputs.mpf_version }}" ]]; then
+            MPF_VERSION="${{ github.event.inputs.mpf_version }}"
           else
-            SDK_VERSION=$(gh release view -R QMPF/mpf-sdk --json tagName -q '.tagName')
+            MPF_VERSION=$(gh release view -R QMPF/mpf-release --json tagName -q '.tagName')
           fi
-          echo "sdk_version=$SDK_VERSION" >> $GITHUB_OUTPUT
-
-          if [[ -n "${{ github.event.inputs.http_client_version }}" ]]; then
-            HTTP_VERSION="${{ github.event.inputs.http_client_version }}"
-          else
-            HTTP_VERSION=$(gh release view -R QMPF/mpf-http-client --json tagName -q '.tagName')
-          fi
-          echo "http_client_version=$HTTP_VERSION" >> $GITHUB_OUTPUT
-
-          echo "Using SDK: $SDK_VERSION, HTTP Client: $HTTP_VERSION"
+          echo "mpf_version=$MPF_VERSION" >> $GITHUB_OUTPUT
+          echo "Using MPF: $MPF_VERSION"
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -92,26 +79,15 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev
 
-      - name: Download dependencies
+      - name: Download MPF
         shell: bash
         run: |
-          mkdir -p deps
-
-          mkdir -p deps/mpf-sdk && cd deps/mpf-sdk
-          gh release download ${{ needs.resolve-versions.outputs.sdk_version }} \
-            -R QMPF/mpf-sdk \
-            -p "mpf-sdk-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
+          mkdir -p deps/mpf && cd deps/mpf
+          gh release download ${{ needs.resolve-versions.outputs.mpf_version }} \
+            -R QMPF/mpf-release \
+            -p "mpf-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
           [[ "${{ matrix.ext }}" == "tar.gz" ]] && tar -xzf *.tar.gz || 7z x *.zip
           rm -f *.${{ matrix.ext }}
-          cd ../..
-
-          mkdir -p deps/mpf-http-client && cd deps/mpf-http-client
-          gh release download ${{ needs.resolve-versions.outputs.http_client_version }} \
-            -R QMPF/mpf-http-client \
-            -p "mpf-http-client-${{ matrix.artifact_suffix }}.${{ matrix.ext }}"
-          [[ "${{ matrix.ext }}" == "tar.gz" ]] && tar -xzf *.tar.gz || 7z x *.zip
-          rm -f *.${{ matrix.ext }}
-          cd ../..
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -121,7 +97,7 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_INSTALL_PREFIX=$PWD/install \
-            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf-sdk;$PWD/deps/mpf-http-client"
+            -DCMAKE_PREFIX_PATH="$PWD/deps/mpf"
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
@@ -130,7 +106,7 @@ jobs:
           cmake -B build -G "MinGW Makefiles" \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install" \
-            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps/mpf-sdk;$GITHUB_WORKSPACE/deps/mpf-http-client"
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps/mpf"
 
       - name: Build
         shell: bash
@@ -172,18 +148,18 @@ jobs:
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
           echo "Latest tag: $LATEST_TAG"
-          
+
           VERSION=${LATEST_TAG#v}
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
           NEW_PATCH=$((PATCH + 1))
           NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
           echo "New tag: $NEW_TAG"
-          
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$NEW_TAG" -m "Auto-release $NEW_TAG (triggered by upstream)"
           git push origin "$NEW_TAG"
-          
+
           echo "Pushed tag $NEW_TAG"
 
   release:
@@ -192,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
