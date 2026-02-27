@@ -127,7 +127,7 @@ void RulesPlugin::registerRoutes()
         // 查找 QML 模块目录
         QString qmlFile;
         for (const QString& basePath : searchPaths) {
-            QString candidate = QDir::cleanPath(basePath + "/Biiz/Rules/RulesPage.qml");
+            QString candidate = QDir::cleanPath(basePath + "/Biiz/Rules/OrdersPage.qml");
             if (QFile::exists(candidate)) {
                 qmlFile = candidate;
                 break;
@@ -135,7 +135,7 @@ void RulesPlugin::registerRoutes()
         }
         
         if (qmlFile.isEmpty()) {
-            MPF_LOG_ERROR("RulesPlugin", "Could not find Biiz/Rules/RulesPage.qml!");
+            MPF_LOG_ERROR("RulesPlugin", "Could not find Biiz/Rules/OrdersPage.qml!");
             MPF_LOG_ERROR("RulesPlugin", QString("Searched paths: %1").arg(searchPaths.join("; ")).toStdString().c_str());
             return;
         }
