@@ -13,19 +13,22 @@ if(APPLE)
 endif()
 
 # Find dependencies
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Network)
 
 # SDK (installed via CMAKE_PREFIX_PATH)
 find_package(MPF REQUIRED)
+find_package(MPFHttpClient REQUIRED)
 
 # Plugin library
 add_library(rules-plugin SHARED
     src/rules_plugin.cpp
     src/rules_service.cpp
     src/rule_model.cpp
+    src/demo_service.cpp
     include/rules_plugin.h
     include/rules_service.h
     include/rule_model.h
+    include/demo_service.h
 )
 
 target_include_directories(rules-plugin PRIVATE
@@ -37,7 +40,9 @@ target_link_libraries(rules-plugin PRIVATE
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    Qt6::Network
     MPF::foundation-sdk
+    MPF::mpf-http-client
 )
 
 # Static link CRT on MinGW to avoid cross-DLL heap issues
@@ -46,7 +51,7 @@ if(MINGW)
 endif()
 
 # QML 文件
-set(PLUGIN_QML_FILES qml/RulesPage.qml qml/RuleCard.qml qml/CreateRuleDialog.qml)
+set(PLUGIN_QML_FILES qml/RulesPage.qml qml/RuleCard.qml qml/CreateRuleDialog.qml qml/DemoPage.qml)
 
 # Auto-flatten paths: qml/Foo.qml -> Foo.qml
 foreach(file ${PLUGIN_QML_FILES})

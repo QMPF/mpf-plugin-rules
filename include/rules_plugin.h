@@ -6,6 +6,7 @@
 namespace rules {
 
 class RulesService;
+class DemoService;
 
 /**
  * @brief Rules plugin implementation
@@ -39,6 +40,7 @@ private:
 
   mpf::ServiceRegistry *m_registry = nullptr;
   std::unique_ptr<RulesService> m_rulesService;
+  std::unique_ptr<DemoService> m_demoService;
 };
 
 } // namespace rules

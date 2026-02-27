@@ -1,15 +1,18 @@
 #include "rules_plugin.h"
 #include "rules_service.h"
 #include "rule_model.h"
+#include "demo_service.h"
 
 #include <mpf/service_registry.h>
 #include <mpf/interfaces/inavigation.h>
 #include <mpf/interfaces/imenu.h>
+#include <mpf/interfaces/ieventbus.h>
 #include <mpf/logger.h>
 
 #include <QJsonDocument>
 #include <QQmlEngine>
 #include <QFile>
+#include <QFileInfo>
 #include <QDir>
 #include <QUrl>
 #include <QCoreApplication>
@@ -42,7 +45,10 @@ bool RulesPlugin::initialize(mpf::ServiceRegistry* registry)
     
     // Create and register our service
     m_rulesService = std::make_unique<RulesService>(this);
-    
+
+    // Demo service for framework showcase
+    m_demoService = std::make_unique<DemoService>("com.biiz.rules", this);
+
     // Register QML types
     registerQmlTypes();
     
@@ -56,7 +62,16 @@ bool RulesPlugin::start()
     
     // Register routes with navigation service
     registerRoutes();
-    
+
+    // Connect DemoService to EventBus for cross-plugin messaging
+    auto* eventBus = m_registry->get<mpf::IEventBus>();
+    if (eventBus) {
+        auto* eventBusObj = dynamic_cast<QObject*>(eventBus);
+        if (eventBusObj) {
+            m_demoService->connectToEventBus(eventBusObj, "demo/rules/");
+        }
+    }
+
     // Add some sample data for demo
     m_rulesService->createRule({
         {"customerName", "Rule A"},
@@ -146,7 +161,16 @@ void RulesPlugin::registerRoutes()
         
         // 注册主页面（内部导航使用 Popup）
         nav->registerRoute("rules", rulesPage);
-        
+
+        // Register demo page route
+        QString qmlBase = QFileInfo(qmlFile).absolutePath();
+        QString demoFile = QDir::cleanPath(qmlBase + "/DemoPage.qml");
+        if (QFile::exists(demoFile)) {
+            QString demoPage = QUrl::fromLocalFile(demoFile).toString();
+            nav->registerRoute("rules-demo", demoPage);
+            MPF_LOG_INFO("RulesPlugin", "Registered route: rules-demo");
+        }
+
         MPF_LOG_INFO("RulesPlugin", "Registered route: rules");
     }
     
@@ -177,6 +201,17 @@ void RulesPlugin::registerRoutes()
         });
         
         MPF_LOG_DEBUG("RulesPlugin", "Registered menu item");
+
+        // Register demo menu item
+        mpf::MenuItem demoItem;
+        demoItem.id = "rules-demo";
+        demoItem.label = tr("Rules Demo");
+        demoItem.icon = "\xF0\x9F\x8E\xA8";  // 🎨
+        demoItem.route = "rules-demo";
+        demoItem.pluginId = "com.biiz.rules";
+        demoItem.order = 25;
+        demoItem.group = "Demo";
+        menu->registerItem(demoItem);
     } else {
         MPF_LOG_WARNING("RulesPlugin", "Menu service not available");
     }
@@ -189,7 +224,10 @@ void RulesPlugin::registerQmlTypes()
     
     // Register model
     qmlRegisterType<RuleModel>("Biiz.Rules", 1, 0, "RuleModel");
-    
+
+    // Register DemoService singleton for QML
+    qmlRegisterSingletonInstance("Biiz.Rules", 1, 0, "DemoService", m_demoService.get());
+
     MPF_LOG_DEBUG("RulesPlugin", "Registered QML types");
 }
 
