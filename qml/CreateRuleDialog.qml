@@ -5,9 +5,9 @@ import QtQuick.Layouts
 Dialog {
     id: root
     
-    property var orderData: ({})
+    property var ruleData: ({})
     
-    title: qsTr("Create New Order")
+    title: qsTr("Create New Rule")
     modal: true
     standardButtons: Dialog.Ok | Dialog.Cancel
     
@@ -28,7 +28,7 @@ Dialog {
     }
     
     onAccepted: {
-        orderData = {
+        ruleData = {
             customerName: customerField.text,
             productName: productField.text,
             quantity: parseInt(quantityField.text) || 1,

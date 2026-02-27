@@ -12,9 +12,9 @@ Page {
     }
     
     // Rules model
-    OrderModel {
+    RuleModel {
         id: rulesModel
-        service: OrdersService
+        service: RulesService
     }
     
     header: ToolBar {
@@ -62,13 +62,13 @@ Page {
         
         StatCard {
             label: qsTr("Total Rules")
-            value: OrdersService.getOrderCount()
+            value: RulesService.getRuleCount()
             Layout.fillWidth: true
         }
         
         StatCard {
             label: qsTr("Active")
-            value: "$" + OrdersService.getTotalRevenue().toFixed(2)
+            value: "$" + RulesService.getTotalRevenue().toFixed(2)
             Layout.fillWidth: true
         }
     }
@@ -88,10 +88,10 @@ Page {
         
         model: rulesModel
         
-        delegate: OrderCard {
+        delegate: RuleCard {
             width: rulesList.width
             
-            orderId: model.id
+            ruleId: model.id
             customerName: model.customerName
             productName: model.productName
             quantity: model.quantity
@@ -106,7 +106,7 @@ Page {
             }
             
             onStatusChangeRequested: function(newStatus) {
-                OrdersService.updateStatus(model.id, newStatus)
+                RulesService.updateStatus(model.id, newStatus)
             }
             
             onDeleteRequested: {
@@ -144,7 +144,7 @@ Page {
         }
         
         onOpened: {
-            ruleData = OrdersService.getOrder(ruleId)
+            ruleData = RulesService.getRule(ruleId)
         }
         
         ColumnLayout {
@@ -200,8 +200,8 @@ Page {
                     
                     onActivated: function(index) {
                         if (model[index] !== detailPopup.ruleData.status) {
-                            OrdersService.updateStatus(detailPopup.ruleId, model[index])
-                            detailPopup.ruleData = OrdersService.getOrder(detailPopup.ruleId)
+                            RulesService.updateStatus(detailPopup.ruleId, model[index])
+                            detailPopup.ruleData = RulesService.getRule(detailPopup.ruleId)
                         }
                     }
                 }
@@ -226,10 +226,10 @@ Page {
     }
     
     // Create dialog
-    CreateOrderDialog {
+    CreateRuleDialog {
         id: createDialog
         onAccepted: {
-            OrdersService.createOrder(orderData)
+            RulesService.createRule(ruleData)
         }
     }
     
@@ -250,7 +250,7 @@ Page {
         }
         
         onAccepted: {
-            OrdersService.deleteOrder(ruleId)
+            RulesService.deleteRule(ruleId)
         }
     }
     

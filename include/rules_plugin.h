@@ -3,14 +3,12 @@
 #include <QObject>
 #include <mpf/interfaces/iplugin.h>
 
-namespace orders {
-class OrdersService;
-}
-
 namespace rules {
 
+class RulesService;
+
 /**
- * @brief Orders plugin implementation
+ * @brief Rules plugin implementation
  *
  * Demonstrates a complete business plugin with:
  * - Service registration
@@ -40,7 +38,7 @@ private:
   void registerQmlTypes();
 
   mpf::ServiceRegistry *m_registry = nullptr;
-  std::unique_ptr<orders::OrdersService> m_ordersService;
+  std::unique_ptr<RulesService> m_rulesService;
 };
 
 } // namespace rules

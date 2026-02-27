@@ -1,6 +1,6 @@
 #include "rules_plugin.h"
-#include "orders_service.h"
-#include "order_model.h"
+#include "rules_service.h"
+#include "rule_model.h"
 
 #include <mpf/service_registry.h>
 #include <mpf/interfaces/inavigation.h>
@@ -31,8 +31,8 @@ bool RulesPlugin::initialize(mpf::ServiceRegistry* registry)
     
     // 调试：检查 qrc 资源是否可访问
     QStringList resourcesToCheck = {
-        ":/Biiz/Rules/qml/OrdersPage.qml",
-        "qrc:/Biiz/Rules/qml/OrdersPage.qml"
+        ":/Biiz/Rules/qml/RulesPage.qml",
+        "qrc:/Biiz/Rules/qml/RulesPage.qml"
     };
     for (const QString& res : resourcesToCheck) {
         QFile f(res);
@@ -41,7 +41,7 @@ bool RulesPlugin::initialize(mpf::ServiceRegistry* registry)
     }
     
     // Create and register our service
-    m_ordersService = std::make_unique<orders::OrdersService>(this);
+    m_rulesService = std::make_unique<RulesService>(this);
     
     // Register QML types
     registerQmlTypes();
@@ -58,7 +58,7 @@ bool RulesPlugin::start()
     registerRoutes();
     
     // Add some sample data for demo
-    m_ordersService->createOrder({
+    m_rulesService->createRule({
         {"customerName", "Rule A"},
         {"productName", "Validation Rule"},
         {"quantity", 1},
@@ -66,7 +66,7 @@ bool RulesPlugin::start()
         {"status", "active"}
     });
     
-    m_ordersService->createOrder({
+    m_rulesService->createRule({
         {"customerName", "Rule B"},
         {"productName", "Approval Rule"},
         {"quantity", 1},
@@ -127,7 +127,7 @@ void RulesPlugin::registerRoutes()
         // 查找 QML 模块目录
         QString qmlFile;
         for (const QString& basePath : searchPaths) {
-            QString candidate = QDir::cleanPath(basePath + "/Biiz/Rules/OrdersPage.qml");
+            QString candidate = QDir::cleanPath(basePath + "/Biiz/Rules/RulesPage.qml");
             if (QFile::exists(candidate)) {
                 qmlFile = candidate;
                 break;
@@ -135,7 +135,7 @@ void RulesPlugin::registerRoutes()
         }
         
         if (qmlFile.isEmpty()) {
-            MPF_LOG_ERROR("RulesPlugin", "Could not find Biiz/Rules/OrdersPage.qml!");
+            MPF_LOG_ERROR("RulesPlugin", "Could not find Biiz/Rules/RulesPage.qml!");
             MPF_LOG_ERROR("RulesPlugin", QString("Searched paths: %1").arg(searchPaths.join("; ")).toStdString().c_str());
             return;
         }
@@ -154,10 +154,10 @@ void RulesPlugin::registerRoutes()
     auto* menu = m_registry->get<mpf::IMenu>();
     if (menu) {
         mpf::MenuItem item;
-        item.id = "rules";              // Changed from "orders"
-        item.label = tr("Rules");       // Changed from "Orders"
-        item.icon = "📋";               // Changed icon
-        item.route = "rules";           // Changed from "orders"
+        item.id = "rules";
+        item.label = tr("Rules");
+        item.icon = "📋";
+        item.route = "rules";
         item.pluginId = "com.biiz.rules";
         item.order = 20;
         item.group = "Business";
@@ -169,11 +169,11 @@ void RulesPlugin::registerRoutes()
         }
         
         // Update badge with rule count
-        menu->setBadge("rules", QString::number(m_ordersService->getOrderCount()));
+        menu->setBadge("rules", QString::number(m_rulesService->getRuleCount()));
         
         // Connect to update badge when rules change
-        connect(m_ordersService.get(), &orders::OrdersService::ordersChanged, this, [this, menu]() {
-            menu->setBadge("rules", QString::number(m_ordersService->getOrderCount()));
+        connect(m_rulesService.get(), &RulesService::rulesChanged, this, [this, menu]() {
+            menu->setBadge("rules", QString::number(m_rulesService->getRuleCount()));
         });
         
         MPF_LOG_DEBUG("RulesPlugin", "Registered menu item");
@@ -185,10 +185,10 @@ void RulesPlugin::registerRoutes()
 void RulesPlugin::registerQmlTypes()
 {
     // Register service as singleton (using Biiz.Rules URI)
-    qmlRegisterSingletonInstance("Biiz.Rules", 1, 0, "RulesService", m_ordersService.get());
+    qmlRegisterSingletonInstance("Biiz.Rules", 1, 0, "RulesService", m_rulesService.get());
     
     // Register model
-    qmlRegisterType<orders::OrderModel>("Biiz.Rules", 1, 0, "RuleModel");
+    qmlRegisterType<RuleModel>("Biiz.Rules", 1, 0, "RuleModel");
     
     MPF_LOG_DEBUG("RulesPlugin", "Registered QML types");
 }

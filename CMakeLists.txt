@@ -21,11 +21,11 @@ find_package(MPF REQUIRED)
 # Plugin library
 add_library(rules-plugin SHARED
     src/rules_plugin.cpp
-    src/orders_service.cpp
-    src/order_model.cpp
+    src/rules_service.cpp
+    src/rule_model.cpp
     include/rules_plugin.h
-    include/orders_service.h
-    include/order_model.h
+    include/rules_service.h
+    include/rule_model.h
 )
 
 target_include_directories(rules-plugin PRIVATE
@@ -45,19 +45,8 @@ if(MINGW)
     target_link_options(rules-plugin PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
-# QML 文件 - 源文件 -> 输出别名 的映射
-# 注意：rules 插件复用了 orders 的 QML 文件，但输出名不同
-set(PLUGIN_QML_FILES qml/OrdersPage.qml qml/OrderCard.qml qml/CreateOrderDialog.qml)
-set(PLUGIN_QML_ALIASES RulesPage.qml RuleCard.qml CreateRuleDialog.qml)
-
-# 设置别名（支持源文件名和输出名不同）
-list(LENGTH PLUGIN_QML_FILES file_count)
-math(EXPR last_index "${file_count} - 1")
-foreach(i RANGE ${last_index})
-    list(GET PLUGIN_QML_FILES ${i} file)
-    list(GET PLUGIN_QML_ALIASES ${i} alias)
-    set_source_files_properties(${file} PROPERTIES QT_RESOURCE_ALIAS ${alias})
-endforeach()
+# QML 文件
+set(PLUGIN_QML_FILES qml/RulesPage.qml qml/RuleCard.qml qml/CreateRuleDialog.qml)
 
 # QML module embedded in plugin
 qt_add_qml_module(rules-plugin

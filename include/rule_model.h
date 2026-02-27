@@ -1,21 +1,21 @@
 #pragma once
 
 #include <QAbstractListModel>
-#include "orders_service.h"
+#include "rules_service.h"
 
-namespace orders {
+namespace rules {
 
 /**
- * @brief List model for orders
+ * @brief List model for rules
  * 
- * Exposes orders to QML ListView/Repeater.
+ * Exposes rules to QML ListView/Repeater.
  */
-class OrderModel : public QAbstractListModel
+class RuleModel : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(QString filterStatus READ filterStatus WRITE setFilterStatus NOTIFY filterStatusChanged)
-    Q_PROPERTY(orders::OrdersService* service READ service WRITE setService NOTIFY serviceChanged)
+    Q_PROPERTY(rules::RulesService* service READ service WRITE setService NOTIFY serviceChanged)
 
 public:
     enum Roles {
@@ -30,11 +30,11 @@ public:
         TotalRole
     };
 
-    explicit OrderModel(QObject* parent = nullptr);
-    explicit OrderModel(OrdersService* service, QObject* parent = nullptr);
-    ~OrderModel() override;
-    OrdersService* service() const { return m_service; }
-    void setService(OrdersService* service);
+    explicit RuleModel(QObject* parent = nullptr);
+    explicit RuleModel(RulesService* service, QObject* parent = nullptr);
+    ~RuleModel() override;
+    RulesService* service() const { return m_service; }
+    void setService(RulesService* service);
 
 
     // QAbstractListModel interface
@@ -56,14 +56,14 @@ signals:
     void serviceChanged();
 
 private slots:
-    void onOrdersChanged();
+    void onRulesChanged();
 
 private:
-    void updateFilteredOrders();
+    void updateFilteredRules();
 
-    OrdersService* m_service = nullptr;
-    QVariantList m_filteredOrders;
+    RulesService* m_service = nullptr;
+    QVariantList m_filteredRules;
     QString m_filterStatus;
 };
 
-} // namespace orders
+} // namespace rules

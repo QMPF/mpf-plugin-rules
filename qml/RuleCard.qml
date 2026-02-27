@@ -5,7 +5,7 @@ import QtQuick.Layouts
 Rectangle {
     id: root
     
-    property string orderId: ""
+    property string ruleId: ""
     property string customerName: ""
     property string productName: ""
     property int quantity: 0
